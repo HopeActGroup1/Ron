@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale: 0.8">
+  <title>Collatz Conjecture Visualizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #1a1a1a;
+      padding: 5px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    input[type="number"] {
+      padding: 10px;
+      font-size: 1.2em;
+      width: 60%;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 15px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      background-color: #00adb5;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #007c80;
+    }
+
+    .animation-box {
+      margin-top: 30px;
+      min-height: 200px;
+      background: #111;
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+      white-space: nowrap;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .step {
+      flex: 0 0 150px;
+      height: 160px;
+      background: #222;
+      border-radius: 10px;
+      margin-right: 12px;
+      padding: 10px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      animation: fadeIn 0.5s ease forwards;
+      box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
+      text-align: center;
+    }
+
+    .step .number {
+      font-size: 1.6em;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .step .explanation {
+      font-size: 0.9em;
+      color: #ccc;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .arrow-up::before, .arrow-down::before, .arrow-infinity::before {
+      content: '';
+      display: block;
+      margin: auto;
+      width: 0;
+      height: 0;
+    }
+
+    .arrow-up::before {
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 15px solid #00ff88;
+      animation: bounceUp 0.6s ease-in-out;
+    }
+
+    .arrow-down::before {
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 15px solid #ff4d4d;
+      animation: bounceDown 0.6s ease-in-out;
+    }
+
+    .arrow-infinity::before {
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 15px solid yellow;
+      animation: bounceDown 0.6s ease-in-out;
+    }
+
+    .final-step {
+      background: #1e3a8a;
+      border: 2px solid #3b82f6;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+    }
+
+    .final-step .number {
+      color: #93c5fd;
+    }
+
+    .final-step .explanation {
+      color: #dbeafe;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes bounceUp {
+      0% { transform: translateY(5px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0); }
+    }
+
+    @keyframes bounceDown {
+      0% { transform: translateY(-5px); }
+      50% { transform: translateY(10px); }
+      100% { transform: translateY(0); }
+    }
+
+    .rulebook {
+      margin-top: 40px;
+      text-align: left;
+      background-color: #111;
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    .rulebook h2 {
+      margin-top: 0;
+      color: #00adb5;
+    }
+
+    .rulebook ul {
+      list-style: square;
+      padding-left: 20px;
+    }
+
+    .rulebook li {
+      margin-bottom: 10px;
+    }
+
+    .graph-container {
+      margin-top: 40px;
+      width: 100%;
+      height: 400px;
+      overflow-x: scroll;
+      margin-bottom: 40px;
+    }
+
+    canvas {
+      background-color: #111;
+      border-radius: 10px;
+      height: 100%;
+      width: max-content;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Collatz Conjecture Visualizer</h1>
+    <input type="number" id="startNumber" placeholder="Enter a positive integer" min="1">
+    <br>
+    <button onclick="startCollatz()">Start Animation</button>
+    <button onclick="resetGraph()">Reset Graph</button>
+
+    <div class="animation-box" id="animationBox"></div>
+    <div class="graph-container">
+      <canvas id="collatzGraph"></canvas>
+    </div>
+
+    <div class="rulebook">
+      <h2>Rulebook</h2>
+      <ul>
+        <li>If the number is <strong>even</strong>, divide it by 2 <span style="color: #ff4d4d;">(↓)</span></li>
+        <li>If the number is <strong>odd</strong>, multiply by 3 and add 1 <span style="color: #00ff88;">(↑)</span></li>
+        <li>The sequence continues until it reaches <strong>1</strong> <span style="color: #3b82f6;">(blue)</span></li>
+        <li>The reason one is the end because its an endless cycle from 1 4 2 1..</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    let chart = null;
+    const graphData = [];
+
+    // Audio files for sound effects
+    const soundArrowUp = new Audio('up.mp3');
+    const soundArrowDown = new Audio('down.mp3');
+    const soundFinal = new Audio('final.mp3');
+
+    async function startCollatz() {
+      const input = document.getElementById("startNumber").value;
+      const container = document.getElementById("animationBox");
+      container.innerHTML = "";
+
+      let num = parseInt(input);
+      if (isNaN(num) || num <= 0) {
+        container.innerHTML = "<span style='color:#ff4d4d;'>Please enter a valid positive integer.</span>";
+        return;
+      }
+
+      const sequence = [num];
+
+      while (num !== 1) {
+        let next, explanation;
+        let stepDiv = document.createElement("div");
+        stepDiv.classList.add("step");
+
+        if (num % 2 === 0) {
+          next = num / 2;
+          explanation = `${num} is even so ${num} ÷ 2 = ${next}`;
+          stepDiv.classList.add("arrow-down");
+          soundArrowDown.play(); // Play sound for arrow down
+        } else {
+          next = 3 * num + 1;
+          explanation = `${num} is odd so ${num} × 3 + 1 = ${next}`;
+          stepDiv.classList.add("arrow-up");
+          soundArrowUp.play(); // Play sound for arrow up
+        }
+
+        stepDiv.innerHTML = `<span class="number">${num}</span><div class="explanation">${explanation}</div>`;
+        container.appendChild(stepDiv);
+        container.scrollLeft = container.scrollWidth;
+
+        sequence.push(next);
+        await new Promise(res => setTimeout(res, 600));
+        num = next;
+      }
+
+      // Final step: 1
+      const lastStep = document.createElement("div");
+      lastStep.classList.add("step", "final-step", "arrow-infinity");
+      lastStep.innerHTML = `
+        <span class="number">1</span>
+        <div class="explanation">Reached 1 — End of sequence ∞</div>
+      `;
+      container.appendChild(lastStep);
+      container.scrollLeft = container.scrollWidth;
+
+      // Play sound for final step
+      soundFinal.play();
+
+      // Record sequence for the graph
+      graphData.push(sequence);
+      updateGraph();
+    }
+
+    function updateGraph() {
+      const ctx = document.getElementById('collatzGraph').getContext('2d');
+
+      if (chart) {
+        chart.destroy();
+      }
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array.from({ length: graphData[0].length }, (_, i) => i + 1),
+          datasets: graphData.map((data, index) => ({
+            label: `Attempt ${index + 1}`,
+            data: data,
+            borderColor: `hsl(${index * 60}, 100%, 50%)`,
+            borderWidth: 2,
+            fill: false
+          }))
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Steps'
+              }
+            },
+
+            y: {
+              title: {
+                display: true,
+                text: 'Number'
+              },
+              min: 0
+            }
+          }
+        }
+      });
+    }
+
+    function resetGraph() {
+      graphData.length = 0;
+      updateGraph();
+    }
+  </script>
+
+</body>
+</html>
